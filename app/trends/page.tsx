@@ -14,17 +14,37 @@ import {
 } from "recharts";
 import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
+import EditTxnSheet, { EditableTxn, SavedTag } from "@/components/EditTxnSheet";
 import { usd, monthLabel, shiftMonth } from "@/lib/format";
 import { cardBadge } from "@/lib/cards";
 
 interface Txn {
+  id: string;
   txn_date: string;
   description: string;
   amount_cents: number;
   txn_type: string;
+  status: string;
+  merchant_norm: string;
+  category_id: string | null;
   spend_type: "personal" | "business" | null;
   categories: { name: string } | null;
   cards: { name: string } | null;
+}
+
+function toEditable(t: Txn): EditableTxn {
+  return {
+    id: t.id,
+    description: t.description,
+    amount_cents: t.amount_cents,
+    txn_date: t.txn_date,
+    txn_type: t.txn_type,
+    status: t.status,
+    spend_type: t.spend_type,
+    category_id: t.category_id,
+    card_name: t.cards?.name ?? null,
+    merchant_norm: t.merchant_norm,
+  };
 }
 
 type ScopeFilter = "all" | "business" | "personal";
@@ -42,6 +62,25 @@ export default function TrendsPage() {
   const [month, setMonth] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EditableTxn | null>(null);
+
+  function applySavedTag(saved: SavedTag) {
+    setTxns((prev) =>
+      prev.map((t) =>
+        t.id === saved.id
+          ? {
+              ...t,
+              spend_type: saved.spend_type,
+              category_id: saved.category_id,
+              categories: saved.category_name
+                ? { name: saved.category_name }
+                : null,
+            }
+          : t
+      )
+    );
+    setEditing(null);
+  }
 
   useEffect(() => {
     (async () => {
@@ -52,7 +91,7 @@ export default function TrendsPage() {
         const { data } = await supabase
           .from("transactions")
           .select(
-            "txn_date, description, amount_cents, txn_type, spend_type, categories(name), cards(name)"
+            "id, txn_date, description, amount_cents, txn_type, status, merchant_norm, category_id, spend_type, categories(name), cards(name)"
           )
           .neq("txn_type", "payment")
           .order("txn_date", { ascending: true })
@@ -271,12 +310,13 @@ export default function TrendsPage() {
                     {selectedDay} —{" "}
                     {usd(dayTxns.reduce((s, t) => s + t.amount_cents, 0))}
                   </p>
-                  {dayTxns.map((t, i) => {
+                  {dayTxns.map((t) => {
                     const b = cardBadge(t.cards?.name);
                     return (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between gap-2 py-1 text-xs"
+                      <button
+                        key={t.id}
+                        onClick={() => setEditing(toEditable(t))}
+                        className="flex w-full items-center justify-between gap-2 py-1 text-left text-xs active:bg-neutral-50"
                       >
                         <span className="truncate">{t.description}</span>
                         <span className="flex shrink-0 items-center gap-1.5">
@@ -289,7 +329,7 @@ export default function TrendsPage() {
                             {usd(t.amount_cents)}
                           </span>
                         </span>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -326,12 +366,13 @@ export default function TrendsPage() {
                   : `All ${monthDetail.list.length} transactions — tap a category to filter`}
               </p>
               <div className="max-h-80 divide-y divide-neutral-100 overflow-y-auto">
-                {monthDetail.list.map((t, i) => {
+                {monthDetail.list.map((t) => {
                   const b = cardBadge(t.cards?.name);
                   return (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between gap-2 py-1.5 text-xs"
+                    <button
+                      key={t.id}
+                      onClick={() => setEditing(toEditable(t))}
+                      className="flex w-full items-center justify-between gap-2 py-1.5 text-left text-xs active:bg-neutral-50"
                     >
                       <div className="min-w-0">
                         <p className="truncate">{t.description}</p>
@@ -350,7 +391,7 @@ export default function TrendsPage() {
                           {usd(t.amount_cents)}
                         </span>
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -421,6 +462,12 @@ export default function TrendsPage() {
           </section>
         </>
       )}
+
+      <EditTxnSheet
+        txn={editing}
+        onClose={() => setEditing(null)}
+        onSaved={applySavedTag}
+      />
 
       <Nav />
     </main>

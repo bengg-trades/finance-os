@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/Nav";
 import { usd, currentMonth, monthLabel, monthRange, shiftMonth } from "@/lib/format";
-import { cardBadge } from "@/lib/cards";
+import TxnList, { TxnListRow } from "@/components/TxnList";
 
 // Spending view — always calendar month (1st → end of month) by transaction
 // date, never statement period. Payments are transfers and excluded; refunds
@@ -25,7 +25,7 @@ export default async function SpendingPage({
   const { data: txns } = await supabase
     .from("transactions")
     .select(
-      "id, txn_date, description, amount_cents, txn_type, status, spend_type, categories(name), cards(name)"
+      "id, txn_date, description, amount_cents, txn_type, status, spend_type, merchant_norm, category_id, categories(name), cards(name)"
     )
     .gte("txn_date", start)
     .lte("txn_date", end)
@@ -116,45 +116,28 @@ export default async function SpendingPage({
       </div>
 
       <h2 className="mb-2 text-sm font-semibold text-neutral-500">
-        Transactions
+        Transactions <span className="font-normal">— tap to retag</span>
       </h2>
-      <div className="divide-y divide-neutral-100 rounded-xl border border-neutral-200 bg-white">
-        {all.map((t) => (
-          <div key={t.id} className="px-4 py-3">
-            <div className="flex justify-between gap-3">
-              <span className="truncate text-sm">{t.description}</span>
-              <span className="shrink-0 text-sm font-medium">
-                {usd(t.amount_cents)}
-              </span>
-            </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-neutral-400">
-              <span>{t.txn_date}</span>
-              {(() => {
-                const b = cardBadge(
-                  (t.cards as unknown as { name: string } | null)?.name
-                );
-                return (
-                  <span className={`rounded px-1 py-px font-medium ${b.className}`}>
-                    {b.short}
-                  </span>
-                );
-              })()}
-              <span>
-                {(t.categories as unknown as { name: string } | null)?.name ??
-                  "Uncategorized"}
-              </span>
-              {t.spend_type === "business" && (
-                <span className="rounded bg-blue-50 px-1 text-blue-600">biz</span>
-              )}
-              {t.status === "pending" && (
-                <span className="rounded bg-amber-50 px-1 text-amber-600">
-                  pending
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+      <TxnList
+        rows={all.map(
+          (t): TxnListRow => ({
+            id: t.id,
+            txn_date: t.txn_date,
+            description: t.description,
+            amount_cents: t.amount_cents,
+            txn_type: t.txn_type,
+            status: t.status,
+            spend_type: t.spend_type,
+            merchant_norm: t.merchant_norm,
+            category_id: t.category_id,
+            category_name:
+              (t.categories as unknown as { name: string } | null)?.name ??
+              null,
+            card_name:
+              (t.cards as unknown as { name: string } | null)?.name ?? null,
+          })
+        )}
+      />
 
       <Nav pendingCount={pendingCount ?? 0} />
     </main>
