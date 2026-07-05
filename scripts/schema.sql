@@ -23,12 +23,16 @@ create table cards (
 );
 
 -- =========================== categories ============================
+-- Side-scoped: every category belongs to business OR personal. Same name
+-- may exist on both sides (Travel, Fees & Interest, Other). Taxonomy is
+-- defined in lib/categories.ts and auto-seeded per user.
 create table categories (
   id         uuid primary key default gen_random_uuid(),
   user_id    uuid not null references auth.users (id),
   name       text not null,
+  scope      text not null check (scope in ('business', 'personal')),
   created_at timestamptz not null default now(),
-  unique (user_id, name)
+  unique (user_id, scope, name)
 );
 
 -- =========================== statements ============================

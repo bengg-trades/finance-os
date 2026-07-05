@@ -12,7 +12,8 @@ import { createClient } from "@/lib/supabase/server";
 import { parseStatement } from "@/lib/parsers";
 import { assignOccurrences } from "@/lib/dedupe";
 import { KNOWN_CARDS } from "@/lib/cards";
-import { DEFAULT_CATEGORIES } from "@/lib/categories";
+import { scopeKey } from "@/lib/categories";
+import { ensureCategories } from "@/lib/seedCategories";
 import { categorizeTransactions, TxnToCategorize } from "@/lib/categorize";
 
 export const maxDuration = 300;
@@ -101,19 +102,8 @@ export async function POST(request: NextRequest) {
     card = created;
   }
 
-  // Seed categories on first use, then build name → id map
-  const { data: existingCats } = await supabase
-    .from("categories")
-    .select("id, name");
-  const catMap = new Map((existingCats ?? []).map((c) => [c.name, c.id]));
-  const missing = DEFAULT_CATEGORIES.filter((n) => !catMap.has(n));
-  if (missing.length > 0) {
-    const { data: seeded } = await supabase
-      .from("categories")
-      .insert(missing.map((name) => ({ user_id: user.id, name })))
-      .select("id, name");
-    for (const c of seeded ?? []) catMap.set(c.name, c.id);
-  }
+  // Seed the scoped taxonomy on first use; map is keyed "scope:name"
+  const catMap = await ensureCategories(supabase, user.id);
 
   // Record the statement
   const { data: statementRow, error: stmtErr } = await supabase
@@ -138,7 +128,9 @@ export async function POST(request: NextRequest) {
   // Dedupe insert: occurrence-count matching + unique index. ignoreDuplicates
   // means overlapping transactions from earlier imports are skipped, not doubled.
   const withOcc = assignOccurrences(stmt.transactions);
-  const feesCatId = catMap.get("Fees & Interest") ?? null;
+  // Card fees follow the card's side (Ink annual fee = business fee)
+  const feesCatId =
+    catMap.get(scopeKey(card.default_use, "Fees & Interest")) ?? null;
   const rows = withOcc.map((t) => ({
     user_id: user.id,
     card_id: card.id,
@@ -213,7 +205,7 @@ export async function POST(request: NextRequest) {
       try {
         const suggestions = await categorizeTransactions(needAi);
         for (const s of suggestions) {
-          const categoryId = catMap.get(s.category);
+          const categoryId = catMap.get(scopeKey(s.spend_type, s.category));
           if (!categoryId) continue;
           await supabase
             .from("transactions")

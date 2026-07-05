@@ -1,20 +1,42 @@
-// Fixed category taxonomy, seeded per-user on first import.
-// Keep this list stable — the categorizer prompt and budgets reference it.
+// Two-sided category taxonomy (locked in with Ben, 2026-07-04).
+// Every category belongs to a side; the sort board only offers the
+// column's own list. "Travel", "Fees & Interest", and "Other" exist on
+// both sides — they're distinct categories that share a name.
 
-export const DEFAULT_CATEGORIES = [
-  "Food & Dining",
-  "Groceries",
-  "Travel",
-  "Transport",
-  "Software & Subscriptions",
-  "Trading Tools",
-  "Business Services",
-  "Shopping",
-  "Health & Fitness",
-  "Entertainment",
-  "Home",
-  "Fees & Interest",
-  "Other",
-] as const;
+export type CategoryScope = "business" | "personal";
 
-export type CategoryName = (typeof DEFAULT_CATEGORIES)[number];
+export const CATEGORY_TAXONOMY: Record<CategoryScope, string[]> = {
+  business: [
+    "Software",
+    "Trading Tools & Data",
+    "Education & Community",
+    "Travel",
+    "Equipment",
+    "Supplies",
+    "Business Meals",
+    "Fees & Interest",
+    "Other",
+  ],
+  personal: [
+    "Grocery",
+    "Housing",
+    "Dining",
+    "Clothing",
+    "Travel",
+    "Car",
+    "Health & Fitness",
+    "Entertainment",
+    "Gifts & Family",
+    "Fees & Interest",
+    "Other",
+  ],
+};
+
+/** All category names, deduped — used for the AI output schema enum */
+export const ALL_CATEGORY_NAMES = [
+  ...new Set([...CATEGORY_TAXONOMY.business, ...CATEGORY_TAXONOMY.personal]),
+];
+
+export function scopeKey(scope: string, name: string): string {
+  return `${scope}:${name}`;
+}

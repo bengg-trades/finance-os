@@ -18,6 +18,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
 import { usd } from "@/lib/format";
+import { cardBadge } from "@/lib/cards";
 
 type SpendType = "personal" | "business";
 
@@ -37,6 +38,7 @@ interface PendingTxn {
 interface Category {
   id: string;
   name: string;
+  scope: SpendType;
 }
 
 function TxnCard({
@@ -50,6 +52,11 @@ function TxnCard({
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: txn.id });
+
+  // Only offer this card's side of the taxonomy
+  const side: SpendType = txn.spend_type === "business" ? "business" : "personal";
+  const sideCategories = categories.filter((c) => c.scope === side);
+  const badge = cardBadge(txn.cards?.name);
 
   return (
     <div
@@ -75,8 +82,13 @@ function TxnCard({
           {usd(txn.amount_cents)}
         </span>
       </div>
-      <p className="mt-0.5 text-[10px] text-neutral-400">
-        {txn.txn_date} · {txn.cards?.name}
+      <p className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-neutral-400">
+        <span
+          className={`rounded px-1 py-px font-medium ${badge.className}`}
+        >
+          {badge.short}
+        </span>
+        {txn.txn_date}
         {txn.txn_type === "payment" && (
           <span className="ml-1 rounded bg-neutral-100 px-1 text-neutral-500">
             card payment — not spending
@@ -101,7 +113,7 @@ function TxnCard({
           className="mt-1.5 w-full rounded border border-neutral-200 bg-neutral-50 px-1 py-1 text-[11px]"
         >
           <option value="">— category —</option>
-          {categories.map((c) => (
+          {sideCategories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
@@ -187,7 +199,7 @@ export default function ReviewBoardPage() {
         )
         .eq("status", "pending")
         .order("txn_date", { ascending: false }),
-      supabase.from("categories").select("id, name").order("name"),
+      supabase.from("categories").select("id, name, scope").order("name"),
     ]);
     setTxns((txnRes.data as unknown as PendingTxn[]) ?? []);
     setCategories(catRes.data ?? []);
@@ -205,13 +217,26 @@ export default function ReviewBoardPage() {
     const txn = txns.find((t) => t.id === active.id);
     if (!txn || txn.spend_type === target) return;
 
+    // Categories are side-scoped: keep a same-name match (Travel → Travel),
+    // otherwise clear so the dropdown asks again on the new side.
+    const currentCat = categories.find((c) => c.id === txn.category_id);
+    const remapped = currentCat
+      ? (categories.find(
+          (c) => c.scope === target && c.name === currentCat.name
+        )?.id ?? null)
+      : null;
+
     setTxns((prev) =>
-      prev.map((t) => (t.id === txn.id ? { ...t, spend_type: target } : t))
+      prev.map((t) =>
+        t.id === txn.id
+          ? { ...t, spend_type: target, category_id: remapped }
+          : t
+      )
     );
     const supabase = createClient();
     await supabase
       .from("transactions")
-      .update({ spend_type: target })
+      .update({ spend_type: target, category_id: remapped })
       .eq("id", txn.id);
   }
 

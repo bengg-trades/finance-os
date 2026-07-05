@@ -9,7 +9,7 @@
 // Every suggestion lands as `pending`; nothing here is final until approved.
 
 import Anthropic from "@anthropic-ai/sdk";
-import { DEFAULT_CATEGORIES } from "./categories";
+import { ALL_CATEGORY_NAMES, CATEGORY_TAXONOMY } from "./categories";
 
 export interface TxnToCategorize {
   id: string;
@@ -40,7 +40,7 @@ const OUTPUT_SCHEMA = {
           id: { type: "string" as const },
           category: {
             type: "string" as const,
-            enum: [...DEFAULT_CATEGORIES],
+            enum: ALL_CATEGORY_NAMES,
           },
           spend_type: {
             type: "string" as const,
@@ -63,7 +63,12 @@ const OUTPUT_SCHEMA = {
 
 const SYSTEM = `You categorize credit-card transactions for a personal finance tracker.
 The owner is a day trader who runs a trading-education business (TradeMomentum). Trading platforms, market data, charting tools, automation/AI tools, and audience/content tools are usually business. Restaurants, retail, fitness, and family travel are usually personal — but a card's usual use is only a prior, not a rule.
-Assign each transaction one category from the fixed list and a spend_type (personal or business), with a confidence from 0 to 1. Use low confidence when genuinely unsure.`;
+
+For each transaction, first decide spend_type (business or personal), then pick the category FROM THAT SIDE'S LIST ONLY:
+- business categories: ${CATEGORY_TAXONOMY.business.join(", ")}
+- personal categories: ${CATEGORY_TAXONOMY.personal.join(", ")}
+
+Report a confidence from 0 to 1; use low confidence when genuinely unsure.`;
 
 const BATCH_SIZE = 40;
 

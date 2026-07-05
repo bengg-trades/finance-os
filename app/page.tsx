@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import Nav from "@/components/Nav";
 import { usd, currentMonth, monthLabel, monthRange, shiftMonth } from "@/lib/format";
+import { cardBadge } from "@/lib/cards";
 
 // Spending view — always calendar month (1st → end of month) by transaction
 // date, never statement period. Payments are transfers and excluded; refunds
@@ -126,9 +127,18 @@ export default async function SpendingPage({
                 {usd(t.amount_cents)}
               </span>
             </div>
-            <div className="mt-0.5 flex gap-2 text-xs text-neutral-400">
+            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-neutral-400">
               <span>{t.txn_date}</span>
-              <span>{(t.cards as unknown as { name: string } | null)?.name}</span>
+              {(() => {
+                const b = cardBadge(
+                  (t.cards as unknown as { name: string } | null)?.name
+                );
+                return (
+                  <span className={`rounded px-1 py-px font-medium ${b.className}`}>
+                    {b.short}
+                  </span>
+                );
+              })()}
               <span>
                 {(t.categories as unknown as { name: string } | null)?.name ??
                   "Uncategorized"}

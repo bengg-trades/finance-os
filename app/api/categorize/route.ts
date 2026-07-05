@@ -4,6 +4,8 @@
 
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { scopeKey } from "@/lib/categories";
+import { ensureCategories } from "@/lib/seedCategories";
 import { categorizeTransactions, TxnToCategorize } from "@/lib/categorize";
 
 export const maxDuration = 300;
@@ -23,12 +25,13 @@ export async function POST() {
     );
   }
 
+  // Any uncategorized purchase, pending OR approved — this also heals rows
+  // after a taxonomy migration. Status is never changed here.
   const { data: uncategorized } = await supabase
     .from("transactions")
     .select(
       "id, description, amount_cents, merchant_norm, bank_category, cards(name, default_use)"
     )
-    .eq("status", "pending")
     .eq("txn_type", "purchase")
     .is("category_id", null)
     .limit(500);
@@ -37,8 +40,7 @@ export async function POST() {
     return NextResponse.json({ status: "ok", categorized: 0, from_rules: 0 });
   }
 
-  const { data: cats } = await supabase.from("categories").select("id, name");
-  const catMap = new Map((cats ?? []).map((c) => [c.name, c.id]));
+  const catMap = await ensureCategories(supabase, user.id);
   const { data: rules } = await supabase
     .from("merchant_rules")
     .select("merchant_norm, category_id, spend_type");
@@ -78,7 +80,7 @@ export async function POST() {
   if (needAi.length > 0) {
     const suggestions = await categorizeTransactions(needAi);
     for (const s of suggestions) {
-      const categoryId = catMap.get(s.category);
+      const categoryId = catMap.get(scopeKey(s.spend_type, s.category));
       if (!categoryId) continue;
       await supabase
         .from("transactions")
