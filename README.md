@@ -5,7 +5,9 @@ Personal spending tracker across all cards. Upload bank statements
 → everything waits in a review queue until approved → calendar-month spending
 views.
 
-See `Project Overview.md` for full context and decisions.
+See `Project Overview.md` for full context and decisions. Session-by-session
+history lives in daily `Task Update YYYY-MM-DD.md` files in this folder — read
+the newest one first when picking up work.
 
 ## Setup
 
@@ -32,4 +34,8 @@ See `Project Overview.md` for full context and decisions.
   see `lib/dedupe.ts`. Two real identical charges survive; re-uploads don't
   double.
 - `statements/` contains real financial data and is gitignored. Keep it out
-  of the repo.
+  of the repo. Same for `.env.local` (Supabase + Anthropic keys).
+- Categories are side-scoped (business | personal) — always resolve by
+  (scope, name) via `ensureCategories()`; same name can exist on both sides.
+- Chase CSVs arrive with charges negative; the parser flips them. Never
+  ingest amounts without going through a parser.

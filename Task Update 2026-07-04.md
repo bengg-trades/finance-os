@@ -1,8 +1,6 @@
-# FINANCE OS — Task Log
+# Task Update 2026-07-04
 
-Session-to-session continuity. Read this first when picking up work.
-
-## 2026-07-04 — Phase 1 built, deployed, and in daily use (full day)
+## Phase 1 built, deployed, and in daily use (full day)
 
 **Shipped today, in order:**
 1. **Scoping interview** → all decisions in `Project Overview.md`

@@ -1,6 +1,6 @@
 # FINANCE OS — Project Overview
 
-**Status:** Phase 1 code complete (2026-07-04) — parsers verified against all 14 real statements, app builds clean. Blocked on Supabase project creation (see TASKS.md).
+**Status:** LIVE in production (2026-07-04) — finance-os-sable.vercel.app. All 2026 statements imported + reviewed; Trends/drill-down shipped. Session history: daily `Task Update YYYY-MM-DD.md` files in this folder (read newest first).
 **Type:** PERSONAL project — not tied to MOMENTUM or any brand.
 **Accounts:** Supabase project goes in the same account as Trade Journal (`benggiles`). App is self-contained in this folder (Trade Journal pattern) — code + notes together, portable later.
 
