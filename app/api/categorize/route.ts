@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { scopeKey } from "@/lib/categories";
 import { ensureCategories } from "@/lib/seedCategories";
+import { fetchApprovedExamples } from "@/lib/examples";
 import { categorizeTransactions, TxnToCategorize } from "@/lib/categorize";
 
 export const maxDuration = 300;
@@ -78,7 +79,8 @@ export async function POST() {
 
   let aiCount = 0;
   if (needAi.length > 0) {
-    const suggestions = await categorizeTransactions(needAi);
+    const examples = await fetchApprovedExamples(supabase);
+    const suggestions = await categorizeTransactions(needAi, examples);
     for (const s of suggestions) {
       const categoryId = catMap.get(scopeKey(s.spend_type, s.category));
       if (!categoryId) continue;
