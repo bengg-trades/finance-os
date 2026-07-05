@@ -77,6 +77,16 @@ function TxnCard({
       </div>
       <p className="mt-0.5 text-[10px] text-neutral-400">
         {txn.txn_date} · {txn.cards?.name}
+        {txn.txn_type === "payment" && (
+          <span className="ml-1 rounded bg-neutral-100 px-1 text-neutral-500">
+            card payment — not spending
+          </span>
+        )}
+        {txn.txn_type === "refund" && (
+          <span className="ml-1 rounded bg-green-100 px-1 text-green-700">
+            refund
+          </span>
+        )}
         {txn.ai_confidence !== null && txn.ai_confidence < 0.7 && (
           <span className="ml-1 rounded bg-amber-100 px-1 text-amber-700">
             AI unsure
@@ -116,7 +126,11 @@ function Column({
   onCategoryChange: (id: string, categoryId: string | null) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: type });
-  const total = txns.reduce((s, t) => s + t.amount_cents, 0);
+  // Card payments are transfers, not spending — they never count in totals.
+  // Refunds stay: a return genuinely reduces what was spent.
+  const total = txns
+    .filter((t) => t.txn_type !== "payment")
+    .reduce((s, t) => s + t.amount_cents, 0);
 
   return (
     <div
@@ -155,6 +169,8 @@ export default function ReviewBoardPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState(false);
+  const [categorizing, setCategorizing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Distance activation keeps taps working for the category dropdowns
   const sensors = useSensors(
@@ -257,8 +273,29 @@ export default function ReviewBoardPage() {
     setApproving(false);
   }
 
+  async function runAiCategorize() {
+    setCategorizing(true);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/categorize", { method: "POST" });
+      const body = await res.json();
+      if (body.error) setNotice(body.error);
+      else
+        setNotice(
+          `Categorized ${body.categorized} with AI, ${body.from_rules} from your past approvals.`
+        );
+      await load();
+    } catch (err) {
+      setNotice(String(err));
+    }
+    setCategorizing(false);
+  }
+
   const personal = txns.filter((t) => t.spend_type !== "business");
   const business = txns.filter((t) => t.spend_type === "business");
+  const uncategorizedCount = txns.filter(
+    (t) => t.txn_type === "purchase" && !t.category_id
+  ).length;
 
   return (
     <main className="mx-auto max-w-lg px-3 pb-32 pt-6">
@@ -267,6 +304,23 @@ export default function ReviewBoardPage() {
         The AI placed everything below. Drag cards between columns to fix the
         split, adjust categories, then approve.
       </p>
+
+      {uncategorizedCount > 0 && !loading && (
+        <button
+          onClick={runAiCategorize}
+          disabled={categorizing}
+          className="mb-3 w-full rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {categorizing
+            ? "AI is categorizing…"
+            : `AI categorize ${uncategorizedCount} uncategorized`}
+        </button>
+      )}
+      {notice && (
+        <p className="mb-3 rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-800">
+          {notice}
+        </p>
+      )}
 
       {loading ? (
         <p className="px-1 text-sm text-neutral-400">Loading…</p>
