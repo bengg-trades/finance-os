@@ -41,6 +41,7 @@ export default function TrendsPage() {
   const [scope, setScope] = useState<ScopeFilter>("all");
   const [month, setMonth] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -109,6 +110,7 @@ export default function TrendsPage() {
     const rows = months.map((mo) => {
       const row: Record<string, number | string> = {
         month: monthLabel(mo).split(" ")[0].slice(0, 3),
+        key: mo,
       };
       for (const cat of categories) {
         const cents = byMonth.get(mo)!.get(cat) ?? 0;
@@ -122,6 +124,33 @@ export default function TrendsPage() {
   const dayTxns = selectedDay
     ? filtered.filter((t) => t.txn_date === selectedDay)
     : [];
+
+  // ---- month breakdown: categories in the selected month + filtered list ----
+  const monthDetail = useMemo(() => {
+    if (!month) return null;
+    const inMonth = filtered.filter((t) => t.txn_date.slice(0, 7) === month);
+    const byCat = new Map<string, { cents: number; count: number }>();
+    for (const t of inMonth) {
+      const cat = t.categories?.name ?? "Uncategorized";
+      const cur = byCat.get(cat) ?? { cents: 0, count: 0 };
+      cur.cents += t.amount_cents;
+      cur.count += 1;
+      byCat.set(cat, cur);
+    }
+    const categories = [...byCat.entries()].sort(
+      (a, b) => b[1].cents - a[1].cents
+    );
+    const list = (
+      selectedCategory
+        ? inMonth.filter(
+            (t) => (t.categories?.name ?? "Uncategorized") === selectedCategory
+          )
+        : inMonth
+    )
+      .slice()
+      .sort((a, b) => (a.txn_date < b.txn_date ? 1 : -1));
+    return { categories, list };
+  }, [filtered, month, selectedCategory]);
 
   const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -137,6 +166,7 @@ export default function TrendsPage() {
             onClick={() => {
               setScope(s);
               setSelectedDay(null);
+              setSelectedCategory(null);
             }}
             className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize ${
               scope === s
@@ -165,6 +195,7 @@ export default function TrendsPage() {
                   onClick={() => {
                     setMonth(shiftMonth(month, -1));
                     setSelectedDay(null);
+                    setSelectedCategory(null);
                   }}
                   className="rounded px-2 py-1 text-neutral-400"
                 >
@@ -180,6 +211,7 @@ export default function TrendsPage() {
                   onClick={() => {
                     setMonth(shiftMonth(month, 1));
                     setSelectedDay(null);
+                    setSelectedCategory(null);
                   }}
                   className="rounded px-2 py-1 text-neutral-400"
                 >
@@ -265,12 +297,91 @@ export default function TrendsPage() {
             </section>
           )}
 
+          {/* ---- month breakdown: tappable category chips + filtered list ---- */}
+          {month && monthDetail && monthDetail.categories.length > 0 && (
+            <section className="mb-8 rounded-2xl border border-neutral-200 bg-white p-4">
+              <p className="mb-3 text-sm font-bold">
+                {monthLabel(month)} breakdown
+              </p>
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {monthDetail.categories.map(([cat, v]) => (
+                  <button
+                    key={cat}
+                    onClick={() =>
+                      setSelectedCategory(selectedCategory === cat ? null : cat)
+                    }
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                      selectedCategory === cat
+                        ? "bg-neutral-900 text-white"
+                        : "border border-neutral-200 bg-neutral-50 text-neutral-600"
+                    }`}
+                  >
+                    {cat} · {usd(v.cents)}
+                  </button>
+                ))}
+              </div>
+              <p className="mb-2 text-xs text-neutral-400">
+                {selectedCategory
+                  ? `${selectedCategory} — ${monthDetail.list.length} transaction${monthDetail.list.length === 1 ? "" : "s"} (tap chip again to clear)`
+                  : `All ${monthDetail.list.length} transactions — tap a category to filter`}
+              </p>
+              <div className="max-h-80 divide-y divide-neutral-100 overflow-y-auto">
+                {monthDetail.list.map((t, i) => {
+                  const b = cardBadge(t.cards?.name);
+                  return (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between gap-2 py-1.5 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate">{t.description}</p>
+                        <p className="text-[10px] text-neutral-400">
+                          {t.txn_date} ·{" "}
+                          {t.categories?.name ?? "Uncategorized"}
+                        </p>
+                      </div>
+                      <span className="flex shrink-0 items-center gap-1.5">
+                        <span
+                          className={`rounded px-1 py-px text-[9px] font-medium ${b.className}`}
+                        >
+                          {b.short}
+                        </span>
+                        <span className="font-medium">
+                          {usd(t.amount_cents)}
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           {/* ---- categories over months ---- */}
           <section className="rounded-2xl border border-neutral-200 bg-white p-4">
-            <p className="mb-3 text-sm font-bold">Categories by month</p>
+            <p className="mb-1 text-sm font-bold">Categories by month</p>
+            <p className="mb-3 text-xs text-neutral-400">
+              Tap a month&apos;s bar to open it above
+            </p>
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chart.rows} margin={{ left: -18, right: 4 }}>
+                <BarChart
+                  data={chart.rows}
+                  margin={{ left: -18, right: 4 }}
+                  onClick={(state) => {
+                    const idx = Number(state?.activeTooltipIndex ?? NaN);
+                    const key = Number.isNaN(idx)
+                      ? undefined
+                      : (chart.rows[idx]?.key as string | undefined);
+                    if (key) {
+                      setMonth(key);
+                      setSelectedDay(null);
+                      setSelectedCategory(null);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
+                  style={{ cursor: "pointer" }}
+                >
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip
