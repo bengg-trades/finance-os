@@ -1,0 +1,15 @@
+# deps / build
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# env — secrets never in the repo
+.env
+.env.*
+
+# real financial statements — NEVER commit these
+statements/
+
+# misc
+.DS_Store
