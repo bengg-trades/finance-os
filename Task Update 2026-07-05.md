@@ -34,5 +34,21 @@
   Trends ("Crunching the numbers…"), Review board ("Dealing the cards…"),
   Upload while importing.
 
+## Logo + loader v2 (later same day)
+
+Ben reviewed 4 logo directions + 4 loader animations (live artifact gallery)
+and picked the recommended pair:
+
+- **Logo "Gold cap"** — dark green tile (#101b14), three ascending emerald
+  bars, gold cap on the tallest (the old cartoon coin absorbed into the
+  chart). Updated in `components/Logo.tsx`, `app/icon.svg`,
+  `app/apple-icon.tsx` (rendered PNG verified visually).
+- **Loader "Rising bars"** — the logo's three bars breathing in a staggered
+  rise (gold-capped third bar), replacing the coin flip. `MoneyLoader.tsx`
+  markup + new `bar-rise` keyframes in `globals.css`; respects
+  prefers-reduced-motion. Same props, so all four usage sites unchanged.
+- Palette now consistent everywhere: greens #2f9e63/#3cc878/#52e695,
+  gold #f2b52a. `npm run build` passes. NOT yet deployed — Ben to confirm.
+
 **Next up (unchanged):** budgets & alerts, tax-year CSV export, receipts,
 BofA parser when statements arrive.
