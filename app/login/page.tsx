@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import Logo from "@/components/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -54,6 +55,9 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-6">
+      <div className="mb-4">
+        <Logo size={56} />
+      </div>
       <h1 className="mb-1 text-2xl font-bold">FINANCE OS</h1>
       <p className="mb-8 text-sm text-neutral-500">Personal spending tracker</p>
 

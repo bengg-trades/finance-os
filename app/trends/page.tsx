@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
+import MoneyLoader from "@/components/MoneyLoader";
 import EditTxnSheet, { EditableTxn, SavedTag } from "@/components/EditTxnSheet";
 import { usd, monthLabel, shiftMonth } from "@/lib/format";
 import { cardBadge } from "@/lib/cards";
@@ -219,7 +220,7 @@ export default function TrendsPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-neutral-400">Loading…</p>
+        <MoneyLoader label="Crunching the numbers…" />
       ) : txns.length === 0 ? (
         <p className="text-sm text-neutral-400">
           No data yet — upload statements first.

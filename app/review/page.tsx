@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/core";
 import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
+import MoneyLoader from "@/components/MoneyLoader";
 import { usd } from "@/lib/format";
 import { cardBadge } from "@/lib/cards";
 
@@ -348,7 +349,7 @@ export default function ReviewBoardPage() {
       )}
 
       {loading ? (
-        <p className="px-1 text-sm text-neutral-400">Loading…</p>
+        <MoneyLoader label="Dealing the cards…" />
       ) : txns.length === 0 ? (
         <p className="rounded-xl bg-green-50 p-4 text-sm text-green-800">
           All caught up — nothing waiting for review.

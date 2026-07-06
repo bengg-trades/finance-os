@@ -23,5 +23,16 @@
   It does NOT bulk-update other past transactions from the same merchant —
   candidate future feature ("apply to all 12 from this merchant?").
 
+## Branding + money loader (later same day)
+
+- **Logo** (`components/Logo.tsx`): dark tile, ascending green bars, gold $
+  coin. Same artwork serves as favicon (`app/icon.svg`) and iOS home-screen
+  icon (`app/apple-icon.tsx`, PNG generated at build via next/og). Shown on
+  the login page.
+- **MoneyLoader** (`components/MoneyLoader.tsx`): flipping gold coin
+  (CSS keyframes in globals.css). Used in: route-level `app/loading.tsx`,
+  Trends ("Crunching the numbers…"), Review board ("Dealing the cards…"),
+  Upload while importing.
+
 **Next up (unchanged):** budgets & alerts, tax-year CSV export, receipts,
 BofA parser when statements arrive.

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Nav from "@/components/Nav";
+import MoneyLoader from "@/components/MoneyLoader";
 
 interface ImportReceipt {
   status?: string;
@@ -59,7 +60,11 @@ export default function UploadPage() {
       </p>
 
       <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-neutral-300 bg-white p-10 text-center text-sm text-neutral-500">
-        {busy ? `Importing ${busy}…` : "Tap to choose files (.pdf .xlsx .csv)"}
+        {busy ? (
+          <MoneyLoader label={`Importing ${busy}…`} />
+        ) : (
+          "Tap to choose files (.pdf .xlsx .csv)"
+        )}
         <input
           type="file"
           multiple
